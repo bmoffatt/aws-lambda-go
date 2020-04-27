@@ -4,10 +4,12 @@ package lambda
 
 import (
 	"log"
-	"net"
-	"net/rpc"
 	"os"
 )
+
+var startFunctions = map[string]func(string, Handler){
+	"AWS_LAMBDA_RUNTIME_API": startRuntimeAPILoop,
+}
 
 // Start takes a handler and talks to an internal Lambda endpoint to pass requests to the handler. If the
 // handler does not match one of the supported types an appropriate error message will be returned to the caller.
@@ -48,15 +50,15 @@ func Start(handler interface{}) {
 //
 //  func Invoke(context.Context, []byte) ([]byte, error)
 func StartHandler(handler Handler) {
-	port := os.Getenv("_LAMBDA_SERVER_PORT")
-	lis, err := net.Listen("tcp", "localhost:"+port)
-	if err != nil {
-		log.Fatal(err)
+	var keys []string
+	for key, f := range startFunctions {
+		config := os.Getenv(key)
+		if config != "" {
+			f(config, handler)
+			log.Fatal("Unreachable")
+		}
+		keys = append(keys, key)
 	}
-	err = rpc.Register(NewFunction(handler))
-	if err != nil {
-		log.Fatal("failed to register handler function")
-	}
-	rpc.Accept(lis)
-	log.Fatal("accept should not have returned")
+
+	log.Fatalf("Could not find expected environment variable %s. Are you sure you're running this on AWS Lambda?", keys)
 }

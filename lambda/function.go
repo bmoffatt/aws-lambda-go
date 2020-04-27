@@ -6,7 +6,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"reflect"
 	"time"
 
 	"github.com/aws/aws-lambda-go/lambda/messages"
@@ -73,25 +72,4 @@ func (fn *Function) Invoke(req *messages.InvokeRequest, response *messages.Invok
 	}
 	response.Payload = payload
 	return nil
-}
-
-func getErrorType(err interface{}) string {
-	errorType := reflect.TypeOf(err)
-	if errorType.Kind() == reflect.Ptr {
-		return errorType.Elem().Name()
-	}
-	return errorType.Name()
-}
-
-func lambdaErrorResponse(invokeError error) *messages.InvokeResponse_Error {
-	var errorName string
-	if errorType := reflect.TypeOf(invokeError); errorType.Kind() == reflect.Ptr {
-		errorName = errorType.Elem().Name()
-	} else {
-		errorName = errorType.Name()
-	}
-	return &messages.InvokeResponse_Error{
-		Message: invokeError.Error(),
-		Type:    errorName,
-	}
 }
