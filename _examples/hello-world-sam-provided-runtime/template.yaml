@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Example Go Function using the provided runtime 
+
+Globals:
+  Function:
+    Timeout: 5
+
+Resources:
+  ProvidedRuntimeFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      Runtime: provided 
+      Handler: bootstrap
+      CodeUri: .
+    Metadata:
+      BuildMethod: makefile
+
+Outputs:
+  ProvidedRuntimeFunction:
+    Description: "First Lambda Function ARN"
+    Value: !GetAtt ProvidedRuntimeFunction.Arn
+  ProvidedRuntimeFunctionIamRole:
+    Description: "Implicit IAM Role created for the function"
+    Value: !GetAtt ProvidedRuntimeFunctionRole.Arn
