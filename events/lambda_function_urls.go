@@ -2,14 +2,21 @@
 
 package events
 
+import (
+	"encoding/json"
+	"net/http"
+	"net/url"
+	"strings"
+)
+
 // LambdaFunctionURLRequest contains data coming from the HTTP request to a Lambda Function URL.
 type LambdaFunctionURLRequest struct {
 	Version               string                          `json:"version"` // Version is expected to be `"2.0"`
 	RawPath               string                          `json:"rawPath"`
 	RawQueryString        string                          `json:"rawQueryString"`
 	Cookies               []string                        `json:"cookies,omitempty"`
-	Headers               map[string]string               `json:"headers"`
-	QueryStringParameters map[string]string               `json:"queryStringParameters,omitempty"`
+	Headers               functionURLHeaders              `json:"headers"`
+	QueryStringParameters functionURLValues               `json:"queryStringParameters,omitempty"`
 	RequestContext        LambdaFunctionURLRequestContext `json:"requestContext"`
 	Body                  string                          `json:"body,omitempty"`
 	IsBase64Encoded       bool                            `json:"isBase64Encoded"`
@@ -53,9 +60,68 @@ type LambdaFunctionURLRequestContextHTTPDescription struct {
 
 // LambdaFunctionURLResponse configures the HTTP response to be returned by Lambda Function URL for the request.
 type LambdaFunctionURLResponse struct {
-	StatusCode      int               `json:"statusCode"`
-	Headers         map[string]string `json:"headers"`
-	Body            string            `json:"body"`
-	IsBase64Encoded bool              `json:"isBase64Encoded"`
-	Cookies         []string          `json:"cookies"`
+	StatusCode      int                `json:"statusCode"`
+	Headers         functionURLHeaders `json:"headers"`
+	Body            string             `json:"body"`
+	IsBase64Encoded bool               `json:"isBase64Encoded"`
+	Cookies         []string           `json:"cookies"`
+}
+
+type functionURLValues url.Values
+
+func (f *functionURLValues) UnmarshalJSON(b []byte) error {
+	var intermediate map[string]commaSeperatedValues
+	if err := json.Unmarshal(b, &intermediate); err != nil {
+		return err
+	}
+	*f = make(functionURLValues, len(intermediate))
+	for k, v := range intermediate {
+		(*f)[k] = v
+	}
+	return nil
+}
+
+func (f functionURLValues) MarshalJSON() ([]byte, error) {
+	intermediate := make(map[string]commaSeperatedValues, len(f))
+	for k, v := range f {
+		intermediate[k] = v
+	}
+	return json.Marshal(intermediate)
+}
+
+type functionURLHeaders http.Header
+
+func (f *functionURLHeaders) UnmarshalJSON(b []byte) error {
+	var intermediate map[string]commaSeperatedValues
+	if err := json.Unmarshal(b, &intermediate); err != nil {
+		return err
+	}
+	*f = make(functionURLHeaders, len(intermediate))
+	for k, v := range intermediate {
+		(*f)[k] = v
+	}
+	return nil
+}
+
+func (f functionURLHeaders) MarshalJSON() ([]byte, error) {
+	intermediate := make(map[string]commaSeperatedValues, len(f))
+	for k, v := range f {
+		intermediate[k] = v
+	}
+	return json.Marshal(intermediate)
+}
+
+type commaSeperatedValues []string
+
+func (c *commaSeperatedValues) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	*c = strings.Split(s, ",")
+	return nil
+}
+
+func (c commaSeperatedValues) MarshalJSON() ([]byte, error) {
+	return json.Marshal(strings.Join(c, ","))
 }

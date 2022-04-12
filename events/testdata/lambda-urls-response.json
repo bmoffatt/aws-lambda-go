@@ -1,8 +1,9 @@
 {
-   "statusCode": 201,
+    "statusCode": 201,
     "headers": {
         "Content-Type": "application/json",
-        "My-Custom-Header": "Custom Value"
+        "My-Custom-Header": "Custom Value",
+        "Multi-Value-Headers": "CustomA,CustomB,CustomC"
     },
     "body": "{ \"message\": \"Hello, world!\" }",
     "cookies": [
