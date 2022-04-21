@@ -4,26 +4,43 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
+	"context"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/lambda"
 )
 
 const usage = `build-lambda-zip - Puts an executable and supplemental files into a zip file that works with AWS Lambda.
 usage:
-  build-lambda-zip [options] handler-exe [paths...]
+  build-lambda-zip [options] handler-exe[.go] [paths...]
+
+notes:
+  This tool will run "GOOS=linux go build" if the handler argument ends with the file extension ".go"
+
+  If set to upload to a function, the default credentials provider from aws-sdk-go-v2 will be used
+
 options:
-  -o, --output  output file path for the zip. (default: ${handler-exe}.zip)
-  -h, --help    prints usage
+  -o, --output          <output-path>     sets the output file path for the zip. (default: ${handler-exe}.zip)
+  -u, --update-function <function-name>   pushes the built zip as a code update to the named function
+  -h, --help                              prints usage
 `
 
 func main() {
 	var outputZip string
 	flag.StringVar(&outputZip, "o", "", "")
 	flag.StringVar(&outputZip, "output", "", "")
+	var functionName string
+	flag.StringVar(&functionName, "u", "", "")
+	flag.StringVar(&functionName, "update-function", "", "")
 	flag.Usage = func() {
 		fmt.Fprint(os.Stderr, usage)
 	}
@@ -35,10 +52,33 @@ func main() {
 	if outputZip == "" {
 		outputZip = fmt.Sprintf("%s.zip", filepath.Base(inputExe))
 	}
-	if err := compressExeAndArgs(outputZip, inputExe, flag.Args()[1:]); err != nil {
-		log.Fatalf("failed to compress file: %v", err)
+
+	if filepath.Ext(inputExe) == ".go" {
+		builtExePath, err := goBuild(inputExe)
+		if err != nil {
+			log.Fatalf("failed to compile .go file %s: %v", inputExe, err)
+		}
+		defer func() {
+			log.Printf("removing intermediate file %s", builtExePath)
+			if err := os.Remove(builtExePath); err != nil {
+				log.Printf("cleanup of %s failed: %v", builtExePath, err)
+			}
+		}()
+		log.Printf("compiled %s to %s", inputExe, builtExePath)
+		inputExe = builtExePath
 	}
-	log.Printf("wrote %s", outputZip)
+
+	if functionName == "" {
+		if err := compressExeAndArgsToFile(outputZip, inputExe, flag.Args()[1:]); err != nil {
+			log.Fatalf("failed to compress file: %v", err)
+		}
+		log.Printf("wrote %s", outputZip)
+	} else {
+		if err := updateFunctionCode(functionName, inputExe, flag.Args()[1:]); err != nil {
+			log.Fatalf("failed to update function code: %v", err)
+		}
+		log.Printf("updated function code for %s", functionName)
+	}
 }
 
 func writeExe(writer *zip.Writer, pathInZip string, data []byte) error {
@@ -68,7 +108,26 @@ func writeExe(writer *zip.Writer, pathInZip string, data []byte) error {
 	return err
 }
 
-func compressExeAndArgs(outZipPath string, exePath string, args []string) error {
+func updateFunctionCode(functionName, exePath string, args []string) error {
+	buffer := bytes.NewBuffer(nil)
+	if err := compressExeAndArgs(buffer, exePath, args); err != nil {
+		return err
+	}
+	cfg, err := config.LoadDefaultConfig(context.Background())
+	if err != nil {
+		return err
+	}
+	svc := lambda.NewFromConfig(cfg)
+	if _, err := svc.UpdateFunctionCode(context.Background(), &lambda.UpdateFunctionCodeInput{
+		FunctionName: &functionName,
+		ZipFile:      buffer.Bytes(),
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func compressExeAndArgsToFile(outZipPath string, exePath string, args []string) error {
 	zipFile, err := os.Create(outZipPath)
 	if err != nil {
 		return err
@@ -80,6 +139,10 @@ func compressExeAndArgs(outZipPath string, exePath string, args []string) error 
 		}
 	}()
 
+	return compressExeAndArgs(zipFile, exePath, args)
+}
+
+func compressExeAndArgs(zipFile io.Writer, exePath string, args []string) error {
 	zipWriter := zip.NewWriter(zipFile)
 	defer zipWriter.Close()
 	data, err := ioutil.ReadFile(exePath)
@@ -107,4 +170,19 @@ func compressExeAndArgs(outZipPath string, exePath string, args []string) error 
 		}
 	}
 	return err
+}
+
+func goBuild(in string) (string, error) {
+	out := fmt.Sprintf("%s.exe", filepath.Base(in))
+	cmd := exec.Command("go", "build", "-o", out, in)
+	cmd.Env = append(
+		[]string{
+			"GOOS=linux",
+			"GOARCH=amd64",
+		},
+		os.Environ()...,
+	)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	return out, cmd.Run()
 }
