@@ -1,4 +1,4 @@
-module github.com/aws/aws-lambda-go/cmd/build-lambda-zip
+module github.com/bmoffatt/aws-lambda-go/cmd/build-lambda-zip
 
 go 1.18
 
