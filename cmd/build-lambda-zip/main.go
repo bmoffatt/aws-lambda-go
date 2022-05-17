@@ -14,9 +14,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/lambda"
+	"github.com/aws/aws-sdk-go-v2/service/lambda/types"
 )
 
 const usage = `build-lambda-zip - Puts an executable and supplemental files into a zip file that works with AWS Lambda.
@@ -118,13 +120,39 @@ func updateFunctionCode(functionName, exePath string, args []string) error {
 		return err
 	}
 	svc := lambda.NewFromConfig(cfg)
-	if _, err := svc.UpdateFunctionCode(context.Background(), &lambda.UpdateFunctionCodeInput{
+	updateResponse, err := svc.UpdateFunctionCode(context.Background(), &lambda.UpdateFunctionCodeInput{
 		FunctionName: &functionName,
 		ZipFile:      buffer.Bytes(),
-	}); err != nil {
+	})
+	if err != nil {
 		return err
 	}
+	status := updateResponse.LastUpdateStatus
+	statusReason := updateResponse.StateReason
+	for {
+		log.Printf("state[%s] reason[%s]", status, deref(statusReason))
+		if status == types.LastUpdateStatusInProgress {
+			time.Sleep(250 * time.Millisecond)
+			function, err := svc.GetFunction(context.Background(), &lambda.GetFunctionInput{
+				FunctionName: &functionName,
+			})
+			if err != nil {
+				return err
+			}
+			status = function.Configuration.LastUpdateStatus
+			statusReason = function.Configuration.LastUpdateStatusReason
+			continue
+		}
+		break
+	}
 	return nil
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return "<nil>"
+	}
+	return *s
 }
 
 func compressExeAndArgsToFile(outZipPath string, exePath string, args []string) error {
