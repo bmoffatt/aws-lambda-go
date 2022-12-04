@@ -1,4 +1,4 @@
-name: code coverage report
+name: Codecov
 on:
   push:
     branches:
@@ -19,7 +19,3 @@ jobs:
       - run: go test -coverprofile=coverage.txt -covermode=atomic ./...
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.txt
-          verbose: true
-
