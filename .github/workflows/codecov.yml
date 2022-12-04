@@ -22,6 +22,4 @@ jobs:
         with:
           file: ./coverage.txt
           verbose: true
-          flags: unittests
-          informational: true
 
