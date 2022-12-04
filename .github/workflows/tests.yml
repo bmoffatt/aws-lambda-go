@@ -21,7 +21,6 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go }}
-      - run: go version
       - name: install lambda runtime interface emulator
         run: |
           curl -L -o /usr/local/bin/aws-lambda-rie \
