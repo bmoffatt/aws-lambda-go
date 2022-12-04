@@ -129,6 +129,8 @@ func validateReturns(handler reflect.Type) error {
 		if !handler.Out(0).Implements(errorType) {
 			return fmt.Errorf("handler returns a single value, but it does not implement error")
 		}
+	case n == 2:
+		panic("impossible")
 	}
 
 	return nil
