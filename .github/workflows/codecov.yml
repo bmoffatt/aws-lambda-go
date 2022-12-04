@@ -1,6 +1,7 @@
 name: code coverage report
 on:
   push:
+    - main
   pull_request:
 jobs:
   coverage:
