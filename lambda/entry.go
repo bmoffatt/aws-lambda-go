@@ -108,3 +108,7 @@ func start(handler *handlerOptions) {
 	logFatalf("expected AWS Lambda environment variables %s are not defined", keys)
 
 }
+
+func Hello() {
+	logFatalf("%s", "yes")
+}
