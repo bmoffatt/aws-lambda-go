@@ -23,9 +23,10 @@ jobs:
           go-version: ${{ matrix.go }}
       - run: go version
       - name: install lambda runtime interface emulator
-        run: curl -L -o /usr/local/bin/aws-lambda-rie https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie-x86_64
-      - run: chmod +x /usr/local/bin/aws-lambda-rie  
-      - name: run the unit tests
-        run: go test -race ./...
+        run: |
+          curl -L -o /usr/local/bin/aws-lambda-rie \
+            https://github.com/aws/aws-lambda-runtime-interface-emulator/releases/latest/download/aws-lambda-rie-x86_64
+          chmod +x /usr/local/bin/aws-lambda-rie  
+      - run: go test -race ./...
 
 
