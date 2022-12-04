@@ -1,10 +1,11 @@
-name: go get build-lambda-zip 
+name: test legacy install instructions for build-lambda-zip 
 on:
   push:
     branches: 
-      - master
+      - main
   schedule:
     - cron: "7 7 * * *"
+  pull_request: #temporary
 
 jobs:
   thejob:
@@ -15,12 +16,11 @@ jobs:
         go-version: [1.12, 1.13]
         platform: [ubuntu-latest, macos-latest, windows-latest]
     steps:
-      - name: Setup Go
-        uses: actions/setup-go@v3
+      - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
 
-      - name: go get
+      - name: test install of build-lambda-zip using go ${{ matrix.go-version }}
         env:
           GOPROXY: direct
           GO111MODULE: on
