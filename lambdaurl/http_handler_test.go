@@ -126,6 +126,7 @@ func TestWrap(t *testing.T) {
 			res, err := handler(context.Background(), &req)
 			require.NoError(t, err)
 			resultBodyBytes, err := ioutil.ReadAll(res)
+			t.Logf("%#v", err)
 			require.NoError(t, err)
 			resultHeaderBytes, resultBodyBytes, ok := bytes.Cut(resultBodyBytes, []byte{0, 0, 0, 0, 0, 0, 0, 0})
 			require.True(t, ok)

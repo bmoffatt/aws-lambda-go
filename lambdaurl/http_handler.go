@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambda/messages"
 )
 
 type httpResponseWriter struct {
@@ -46,6 +47,13 @@ func RequestFromContext(ctx context.Context) (*events.LambdaFunctionURLRequest, 
 	return req, ok
 }
 
+func fromRecover(a any) error {
+	if a == nil {
+		return nil
+	}
+	return messages.FromRecover(a)
+}
+
 // Wrap converts an http.Handler into a lambda request handler.
 // Only Lambda Function URLs configured with `InvokeMode: RESPONSE_STREAM` are supported with the returned handler.
 // The response body of the handler will conform to the content-type `application/vnd.awslambda.http-integration-response`
@@ -72,7 +80,7 @@ func Wrap(handler http.Handler) func(context.Context, *events.LambdaFunctionURLR
 		r, w := io.Pipe()
 		go func() {
 			defer close(status)
-			defer w.Close() // TODO: recover and CloseWithError the any panic value once the runtime API client supports plumbing fatal errors through the reader
+			defer w.CloseWithError(fromRecover(recover()))
 			handler.ServeHTTP(&httpResponseWriter{writer: w, header: header, status: status}, httpRequest)
 		}()
 		response := &events.LambdaFunctionURLStreamingResponse{

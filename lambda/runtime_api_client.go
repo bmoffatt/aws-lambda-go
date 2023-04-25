@@ -7,6 +7,7 @@ package lambda
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil" //nolint: staticcheck
@@ -137,6 +138,9 @@ func (c *runtimeAPIClient) post(url string, body io.Reader, contentType string) 
 	if err != nil {
 		return fmt.Errorf("something went wrong reading the POST response from %s: %v", url, err)
 	}
+	if b.ShouldExit {
+		return errors.New("response reader returned a fatal error")
+	}
 
 	return nil
 }
@@ -146,12 +150,13 @@ func newErrorCapturingReader(r io.Reader) *errorCapturingReader {
 		trailerLambdaErrorType: nil,
 		trailerLambdaErrorBody: nil,
 	}
-	return &errorCapturingReader{r, trailer}
+	return &errorCapturingReader{reader: r, Trailer: trailer}
 }
 
 type errorCapturingReader struct {
-	reader  io.Reader
-	Trailer http.Header
+	reader     io.Reader
+	Trailer    http.Header
+	ShouldExit bool
 }
 
 func (r *errorCapturingReader) Read(p []byte) (int, error) {
@@ -161,8 +166,11 @@ func (r *errorCapturingReader) Read(p []byte) (int, error) {
 	n, err := r.reader.Read(p)
 	if err != nil && err != io.EOF {
 		lambdaErr := messages.FromError(err)
+		r.ShouldExit = lambdaErr.ShouldExit
+		marshaledErr := safeMarshal(lambdaErr)
+		log.Printf("%s", marshaledErr)
 		r.Trailer.Set(trailerLambdaErrorType, lambdaErr.Type)
-		r.Trailer.Set(trailerLambdaErrorBody, base64.StdEncoding.EncodeToString(safeMarshal(lambdaErr)))
+		r.Trailer.Set(trailerLambdaErrorBody, base64.StdEncoding.EncodeToString(marshaledErr))
 		return 0, io.EOF
 	}
 	return n, err
