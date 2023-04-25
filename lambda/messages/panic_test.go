@@ -1,4 +1,6 @@
-package lambda
+// Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+package messages
 
 import (
 	"errors"
@@ -7,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/aws-lambda-go/lambda/messages"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,7 +42,7 @@ func TestPanicFormattingCustomError(t *testing.T) {
 }
 
 func TestPanicFormattingInvokeResponse_Error(t *testing.T) {
-	ive := &messages.InvokeResponse_Error{Message: "message", Type: "type"}
+	ive := &InvokeResponse_Error{Message: "message", Type: "type"}
 	assertPanicMessage(t, func() { panic(ive) }, ive.Error())
 }
 
@@ -138,10 +139,5 @@ func getPackagePath() (string, error) {
 	} else {
 		paths = strings.Split(fullPath, "/")
 	}
-
-	// The frame.Path will only contain the last 5 directories if there are more than 5 directories.
-	if len(paths) >= 5 {
-		paths = paths[len(paths)-4:]
-	}
-	return strings.Join(paths, "/"), nil
+	return strings.Join(paths[1:], "/"), nil
 }

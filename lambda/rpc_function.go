@@ -69,7 +69,7 @@ func (fn *Function) Ping(req *messages.PingRequest, response *messages.PingRespo
 func (fn *Function) Invoke(req *messages.InvokeRequest, response *messages.InvokeResponse) error {
 	defer func() {
 		if err := recover(); err != nil {
-			response.Error = lambdaPanicResponse(err)
+			response.Error = messages.FromRecover(err)
 		}
 	}()
 
@@ -87,7 +87,7 @@ func (fn *Function) Invoke(req *messages.InvokeRequest, response *messages.Invok
 	}
 	if len(req.ClientContext) > 0 {
 		if err := json.Unmarshal(req.ClientContext, &lc.ClientContext); err != nil {
-			response.Error = lambdaErrorResponse(err)
+			response.Error = messages.FromError(err)
 			return nil
 		}
 	}
@@ -99,7 +99,7 @@ func (fn *Function) Invoke(req *messages.InvokeRequest, response *messages.Invok
 
 	payload, err := fn.handler.Invoke(invokeContext, req.Payload)
 	if err != nil {
-		response.Error = lambdaErrorResponse(err)
+		response.Error = messages.FromError(err)
 		return nil
 	}
 	response.Payload = payload

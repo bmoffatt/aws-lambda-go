@@ -1,18 +1,16 @@
 // Copyright 2017 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
-package lambda
+package messages
 
 import (
 	"fmt"
 	"runtime"
 	"strings"
-
-	"github.com/aws/aws-lambda-go/lambda/messages"
 )
 
 type panicInfo struct {
-	Message    string                                      // Value passed to panic call, converted to string
-	StackTrace []*messages.InvokeResponse_Error_StackFrame // Stack trace of the panic
+	Message    string                             // Value passed to panic call, converted to string
+	StackTrace []*InvokeResponse_Error_StackFrame // Stack trace of the panic
 }
 
 func getPanicInfo(value interface{}) panicInfo {
@@ -28,12 +26,12 @@ func getPanicMessage(value interface{}) string {
 
 var defaultErrorFrameCount = 32
 
-func getPanicStack() []*messages.InvokeResponse_Error_StackFrame {
+func getPanicStack() []*InvokeResponse_Error_StackFrame {
 	s := make([]uintptr, defaultErrorFrameCount)
 	const framesToHide = 3 // this (getPanicStack) -> getPanicInfo -> handler defer func
 	n := runtime.Callers(framesToHide, s)
 	if n == 0 {
-		return make([]*messages.InvokeResponse_Error_StackFrame, 0)
+		return make([]*InvokeResponse_Error_StackFrame, 0)
 	}
 
 	s = s[:n]
@@ -41,8 +39,8 @@ func getPanicStack() []*messages.InvokeResponse_Error_StackFrame {
 	return convertStack(s)
 }
 
-func convertStack(s []uintptr) []*messages.InvokeResponse_Error_StackFrame {
-	var converted []*messages.InvokeResponse_Error_StackFrame
+func convertStack(s []uintptr) []*InvokeResponse_Error_StackFrame {
+	var converted []*InvokeResponse_Error_StackFrame
 	frames := runtime.CallersFrames(s)
 
 	for {
@@ -58,7 +56,7 @@ func convertStack(s []uintptr) []*messages.InvokeResponse_Error_StackFrame {
 	return converted
 }
 
-func formatFrame(inputFrame runtime.Frame) *messages.InvokeResponse_Error_StackFrame {
+func formatFrame(inputFrame runtime.Frame) *InvokeResponse_Error_StackFrame {
 	path := inputFrame.File
 	line := int32(inputFrame.Line)
 	label := inputFrame.Function
@@ -91,7 +89,7 @@ func formatFrame(inputFrame runtime.Frame) *messages.InvokeResponse_Error_StackF
 	// Likewise strip the package name
 	label = label[strings.Index(label, ".")+1:]
 
-	return &messages.InvokeResponse_Error_StackFrame{
+	return &InvokeResponse_Error_StackFrame{
 		Path:  path,
 		Line:  line,
 		Label: label,

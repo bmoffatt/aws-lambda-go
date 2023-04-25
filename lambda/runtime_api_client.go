@@ -13,6 +13,8 @@ import (
 	"log"
 	"net/http"
 	"runtime"
+
+	"github.com/aws/aws-lambda-go/lambda/messages"
 )
 
 const (
@@ -158,7 +160,7 @@ func (r *errorCapturingReader) Read(p []byte) (int, error) {
 	}
 	n, err := r.reader.Read(p)
 	if err != nil && err != io.EOF {
-		lambdaErr := lambdaErrorResponse(err)
+		lambdaErr := messages.FromError(err)
 		r.Trailer.Set(trailerLambdaErrorType, lambdaErr.Type)
 		r.Trailer.Set(trailerLambdaErrorBody, base64.StdEncoding.EncodeToString(safeMarshal(lambdaErr)))
 		return 0, io.EOF

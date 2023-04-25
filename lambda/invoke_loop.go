@@ -47,7 +47,7 @@ func handleInvoke(invoke *invoke, handler *handlerOptions) error {
 	// set the deadline
 	deadline, err := parseDeadline(invoke)
 	if err != nil {
-		return reportFailure(invoke, lambdaErrorResponse(err))
+		return reportFailure(invoke, messages.FromError(err))
 	}
 	ctx, cancel := context.WithDeadline(handler.baseContext, deadline)
 	defer cancel()
@@ -58,10 +58,10 @@ func handleInvoke(invoke *invoke, handler *handlerOptions) error {
 		InvokedFunctionArn: invoke.headers.Get(headerInvokedFunctionARN),
 	}
 	if err := parseClientContext(invoke, &lc.ClientContext); err != nil {
-		return reportFailure(invoke, lambdaErrorResponse(err))
+		return reportFailure(invoke, messages.FromError(err))
 	}
 	if err := parseCognitoIdentity(invoke, &lc.Identity); err != nil {
-		return reportFailure(invoke, lambdaErrorResponse(err))
+		return reportFailure(invoke, messages.FromError(err))
 	}
 	ctx = lambdacontext.NewContext(ctx, &lc)
 
@@ -113,12 +113,12 @@ func reportFailure(invoke *invoke, invokeErr *messages.InvokeResponse_Error) err
 func callBytesHandlerFunc(ctx context.Context, payload []byte, handler handlerFunc) (response io.Reader, invokeErr *messages.InvokeResponse_Error) {
 	defer func() {
 		if err := recover(); err != nil {
-			invokeErr = lambdaPanicResponse(err)
+			invokeErr = messages.FromRecover(err)
 		}
 	}()
 	response, err := handler(ctx, payload)
 	if err != nil {
-		return nil, lambdaErrorResponse(err)
+		return nil, messages.FromError(err)
 	}
 	return response, nil
 }
