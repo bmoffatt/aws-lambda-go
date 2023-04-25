@@ -132,12 +132,16 @@ func getPackagePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	fullPath = fullPath[1:] // string leading "/"
 	var paths []string
 	if runtime.GOOS == "windows" {
 		paths = strings.Split(fullPath, "\\")
 	} else {
 		paths = strings.Split(fullPath, "/")
 	}
-	return strings.Join(paths[1:], "/"), nil
+	// stack frame paths only keep the trailing 5 directories
+	if len(paths) > 5 {
+		paths = paths[len(paths)-5:]
+	}
+	return strings.Join(paths, "/"), nil
 }
