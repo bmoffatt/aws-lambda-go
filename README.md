@@ -2,7 +2,6 @@
 
 [![tests](https://github.com/aws/aws-lambda-go/workflows/tests/badge.svg)](https://github.com/aws/aws-lambda-go/actions?query=workflow%3Atests)
 [![Go Reference](https://pkg.go.dev/badge/github.com/aws/aws-lambda-go.svg)](https://pkg.go.dev/github.com/aws/aws-lambda-go)
-[![GoCard](https://goreportcard.com/badge/github.com/aws/aws-lambda-go)](https://goreportcard.com/report/github.com/aws/aws-lambda-go)
 [![codecov](https://codecov.io/gh/aws/aws-lambda-go/branch/master/graph/badge.svg)](https://codecov.io/gh/aws/aws-lambda-go)
 
 Libraries, samples, and tools to help Go developers develop AWS Lambda functions.
